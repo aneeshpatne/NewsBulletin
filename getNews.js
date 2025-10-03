@@ -1,4 +1,7 @@
+import { debugData } from "./debugData.js";
+
 export async function postNewsSearch(searchTerm) {
+  /*
   const response = await fetch(
     "http://192.168.1.100:8008/search-and-scrape-news-deep",
     {
@@ -7,6 +10,11 @@ export async function postNewsSearch(searchTerm) {
       body: JSON.stringify({ searchTerm }),
     }
   );
-  const data = response.json();
-  return data;
+  const data = await response.json();
+  */
+
+  const data = debugData;
+
+  const allContent = data.map((item) => item.content.join(" ")).join(" ");
+  return allContent;
 }
