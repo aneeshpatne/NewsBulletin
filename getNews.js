@@ -1,6 +1,7 @@
 import { debugData } from "./debugData.js";
 
 export async function postNewsSearch(searchTerm) {
+  console.log("[SEARCH] Invoke Search API for:" + searchTerm);
   const response = await fetch(
     "http://192.168.1.100:8000/search-and-scrape-news-deep",
     {

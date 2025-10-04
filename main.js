@@ -1,6 +1,7 @@
 import { processNews } from "./processNews.js";
 import { createClient } from "redis";
 
+console.log("[CONNECT] Redis Client");
 const client = await createClient()
   .on("error", (err) => console.error("Redis Connection Error", err))
   .connect();
