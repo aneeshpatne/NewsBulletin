@@ -1,4 +1,5 @@
 import { postNewsSearch } from "./getNews.js";
-
+import { generateReport } from "./newsAgent.js";
 const news = await postNewsSearch("India News");
-console.log(news);
+const article = await generateReport(news);
+console.log(article);
