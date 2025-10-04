@@ -1,6 +1,11 @@
 import RedisClient from "@redis/client/dist/lib/client";
 import { createClient } from "redis";
 import { processNews } from "./processNews";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const client = await createClient()
   .on("error", (err) => console.error("Redis Connection Error", err))
