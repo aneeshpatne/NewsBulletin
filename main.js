@@ -9,7 +9,9 @@ const client = await createClient()
 await processNews(client, "India News", "india_news");
 await processNews(client, "Mumbai News", "mumbai_news");
 
+console.log("[LOGGING] India News");
 const value = await client.get("india_news");
+console.log("[LOGGING] Mumbai News");
 const mumbaiValue = await client.get("mumbai_news");
 
 console.log(value);
