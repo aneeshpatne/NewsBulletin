@@ -10,6 +10,8 @@ await processNews(client, "India News", "india_news");
 await processNews(client, "Mumbai News", "mumbai_news");
 
 const value = await client.get("india_news");
+const mumbaiValue = await client.get("mumbai_news");
 
 console.log(value);
+console.log(mumbaiValue);
 client.destroy();
