@@ -1,0 +1,6 @@
+import "./worker/worker.js";
+import { taskQueue } from "./queues/taskqueue";
+
+const hoursGap = 3;
+
+await taskQueue.add("tasks", { seed: true }, { removeOnComplete: true });
