@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.42",
     "ai": "^5.0.60",
+    "bull": "^4.16.5",
     "dotenv": "^17.2.3",
     "redis": "^5.8.3"
   }
