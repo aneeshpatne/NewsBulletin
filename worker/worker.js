@@ -9,15 +9,65 @@ export function setDelayHours(newVal) {
   delay = newVal;
   console.log("[WORKER] New Delay Value set as: ", newVal);
 }
+console.log("[WORKER INITIALED");
+function delayGenerator({
+  nowTs = Date.now(),
+  baseDelayMs,
+  startHour = 7,
+  endHour = 23,
+}) {
+  const now = new Date(nowTs);
+
+  const inWindow = (d) => {
+    const h = d.getHours();
+    return h >= startHour && h < endHour;
+  };
+
+  const nextStartFrom = (d) => {
+    const n = new Date(d);
+    if (n.getHours() >= endHour) n.setDate(n.getDate() + 1);
+    n.setHours(startHour, 0, 0, 0);
+    return n;
+  };
+
+  if (!inWindow(now)) {
+    const nextStart = nextStartFrom(now);
+    return Math.max(0, nextStart.getTime() - nowTs);
+  }
+  const tentative = new Date(nowTs + baseDelayMs);
+  if (inWindow(tentative)) return baseDelayMs;
+  const nextStart = nextStartFrom(tentative);
+  return Math.max(0, nextStart.getTime() - nowTs);
+}
 
 console.log("[WORKER] Initial Job Activated");
-await taskQueue.add("tasks", { seed: true }, { removeOnComplete: true });
+
+const initialDelay = delayGenerator({ baseDelayMs: 0 });
+if (initialDelay > 0) {
+  console.log(
+    "[WORKER] Outside active window — scheduling initial job after",
+    Math.round(initialDelay / 1000),
+    "seconds"
+  );
+  await taskQueue.add(
+    "tasks",
+    { exec: "example" },
+    { delay: initialDelay, removeOnComplete: true }
+  );
+} else {
+  console.log(
+    "[WORKER] Inside active window — scheduling initial job immediately"
+  );
+  await taskQueue.add("tasks", { exec: "example" }, { removeOnComplete: true });
+}
 
 const worker = new Worker(
   "tasks",
   async (job) => {
-    console.log("[WORKER] Job Started");
-    const child = spawn("node", ["../example.js"], { stdio: "inherit" });
+    console.log("[WORKER] Job Started Executing: ", job.data.exec);
+    const child = spawn("node", [`../${job.data.exec}.js`], {
+      stdio: "inherit",
+    });
     await new Promise((resolve, reject) => {
       child.on("close", (code) => {
         if (code === 0) resolve();
@@ -26,15 +76,18 @@ const worker = new Worker(
       child.on("error", reject);
     });
     console.log("[WORKER] Job Executed");
+    const nextDelay = delayGenerator({ baseDelayMs: delay });
     await taskQueue.add(
       "tasks",
-      { prev: job.id },
-      { delay: delay, removeOnComplete: true }
+      { exec: "example", prev: job.id },
+      { delay: nextDelay, removeOnComplete: true }
     );
+    const runAt = new Date(Date.now() + initialDelay);
     console.log(
-      "[WORKER] Next Job scheduled after a delay of:",
-      (delay / 1000 / 60 / 60).toFixed(3),
-      "hours"
+      "[WORKER] Initial job scheduled in",
+      Math.round(initialDelay / 1000),
+      "s at",
+      runAt.toLocaleTimeString()
     );
     return { done: true };
   },
