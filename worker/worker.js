@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
 import { connection } from "../lib/redis.js";
+import { client } from "../lib/redis_old.js";
 import { taskQueue } from "../queues/taskqueue.js";
 import { spawn } from "child_process";
 
@@ -72,7 +73,15 @@ function delayGenerator({
 
 console.log("[WORKER] Initial Job Activated");
 
-// Clear any existing jobs first
+// Morning ritual: Wipe news_item_new key on first boot
+console.log("[WORKER] Morning Ritual: Wiping news_item_new key");
+try {
+  await client.del("news_item_new");
+  console.log("[WORKER] Successfully wiped news_item_new key");
+} catch (err) {
+  console.error("[WORKER] Error wiping news_item_new key:", err);
+}
+
 await taskQueue.obliterate({ force: true });
 
 const initialDelay = delayGenerator({ baseDelayMs: 0 });
@@ -87,7 +96,7 @@ if (initialDelay > 0) {
   );
   await taskQueue.add(
     "tasks",
-    { exec: "example", scheduledForTs: initialScheduledTs },
+    { exec: "main", scheduledForTs: initialScheduledTs },
     {
       delay: initialDelay,
       removeOnComplete: true,
@@ -101,7 +110,7 @@ if (initialDelay > 0) {
   );
   await taskQueue.add(
     "tasks",
-    { exec: "example", scheduledForTs: initialScheduledTs },
+    { exec: "main", scheduledForTs: initialScheduledTs },
     {
       removeOnComplete: true,
       jobId: "recurring-task",
@@ -113,6 +122,24 @@ const worker = new Worker(
   "tasks",
   async (job) => {
     console.log("[WORKER] Job Started Executing: ", job.data.exec);
+
+    // Morning ritual: Check if IST time is between 7:00 and 7:15 and wipe news_item_new key
+    const nowIST = toISTDate(Date.now());
+    const hour = nowIST.getUTCHours();
+    const minute = nowIST.getUTCMinutes();
+    if (hour === 7 && minute >= 0 && minute < 15) {
+      console.log(
+        "[WORKER] Morning Ritual (7:00-7:15 IST): Wiping news_item_new key"
+      );
+      try {
+        await client.del("news_item_new");
+        console.log(
+          "[WORKER] Successfully wiped news_item_new key between 7:00-7:15 IST"
+        );
+      } catch (err) {
+        console.error("[WORKER] Error wiping news_item_new key:", err);
+      }
+    }
 
     const child = spawn("node", [`../${job.data.exec}.js`], {
       stdio: "inherit",
@@ -127,21 +154,32 @@ const worker = new Worker(
     console.log("[WORKER] Job Executed");
     const nextDelay = delayGenerator({ baseDelayMs: delay });
     const nextScheduledTs = Date.now() + nextDelay;
+
+    // Determine next job: "main" if it will run between 7:00-7:15 IST, otherwise "heartbeat"
+    const nextIST = toISTDate(nextScheduledTs);
+    const nextHour = nextIST.getUTCHours();
+    const nextMinute = nextIST.getUTCMinutes();
+    const isMorningRitual =
+      nextHour === 7 && nextMinute >= 0 && nextMinute < 15;
+    const nextExec = isMorningRitual ? "main" : "heartbeat";
+
     console.log(
       "[WORKER] Next job scheduled in",
       Math.round(nextDelay / 1000),
       "s (IST) at",
-      formatIST(nextScheduledTs)
+      formatIST(nextScheduledTs),
+      "- will execute:",
+      nextExec
     );
-    // Schedule next job BEFORE adding, to ensure proper delay
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Small buffer
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await taskQueue.add(
       "tasks",
-      { exec: "example", prev: job.id, scheduledForTs: nextScheduledTs },
+      { exec: nextExec, prev: job.id, scheduledForTs: nextScheduledTs },
       {
         delay: nextDelay,
         removeOnComplete: true,
-        jobId: "recurring-task", // Use same fixed job ID
+        jobId: "recurring-task",
       }
     );
     console.log(
