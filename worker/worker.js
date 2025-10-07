@@ -91,7 +91,7 @@ if (initialDelay > 0) {
     {
       delay: initialDelay,
       removeOnComplete: true,
-      jobId: "recurring-task", // Use fixed job ID to prevent duplicates
+      jobId: "recurring-task",
     }
   );
 } else {
@@ -104,7 +104,7 @@ if (initialDelay > 0) {
     { exec: "example", scheduledForTs: initialScheduledTs },
     {
       removeOnComplete: true,
-      jobId: "recurring-task", // Use fixed job ID to prevent duplicates
+      jobId: "recurring-task",
     }
   );
 }

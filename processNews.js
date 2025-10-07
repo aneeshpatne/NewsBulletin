@@ -1,11 +1,10 @@
 import { postNewsSearch } from "./getNews.js";
-import { generateReport } from "./newsAgent.js";
 
-export async function processNews(client, query, key, isHeartBeat = false) {
-  console.log("[LOG] Started processing for" + query);
+export async function processNews(query) {
+  console.log(`[PROCESS] Fetching news for query: ${query}`);
   const news = await postNewsSearch(query);
-  const article = await generateReport(news);
-  if (!isHeartBeat) {
-    await client.set(key, article);
-  }
+  console.log(
+    `[PROCESS] News fetched for query: ${query}. Length: ${news.length}`
+  );
+  return news;
 }
