@@ -17,7 +17,7 @@ const worker = new Worker(
   "tasks",
   async (job) => {
     console.log("[WORKER] Job Started");
-    const child = spawn("node", ["../main.js"], { stdio: "inherit" });
+    const child = spawn("node", ["../example.js"], { stdio: "inherit" });
     await new Promise((resolve, reject) => {
       child.on("close", (code) => {
         if (code === 0) resolve();
