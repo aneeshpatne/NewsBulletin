@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
-import { connection } from "../lib/redis";
-import { taskQueue } from "../queues/taskqueue";
+import { connection } from "../lib/redis.js";
+import { taskQueue } from "../queues/taskqueue.js";
 let delayHours = 3;
 
 export function setDelayHours(newVal) {

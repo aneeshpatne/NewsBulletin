@@ -1,5 +1,5 @@
 import "./worker/worker.js";
-import { taskQueue } from "./queues/taskqueue";
+import { taskQueue } from "./queues/taskqueue.js";
 
 const hoursGap = 3;
 
