@@ -3,68 +3,117 @@ import { connection } from "../lib/redis.js";
 import { taskQueue } from "../queues/taskqueue.js";
 import { spawn } from "child_process";
 
-let delay = 3 * 1000;
+let delay = 3 * 60 * 60 * 1000;
+
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+const toISTDate = (ts) => new Date(ts + IST_OFFSET_MS);
+const fromISTDate = (date) => date.getTime() - IST_OFFSET_MS;
+const formatIST = (ts) =>
+  new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(ts);
+
+const sleep = (ms) =>
+  new Promise((resolve) => {
+    if (ms <= 0) return resolve();
+    setTimeout(resolve, ms);
+  });
 
 export function setDelayHours(newVal) {
   delay = newVal;
-  console.log("[WORKER] New Delay Value set as: ", newVal);
+  console.log("[WORKER] New Delay Value set as:", newVal);
 }
-console.log("[WORKER INITIALED");
+
+console.log("[WORKER] Initialised");
+
 function delayGenerator({
   nowTs = Date.now(),
-  baseDelayMs,
+  baseDelayMs = 0,
   startHour = 7,
   endHour = 23,
 }) {
-  const now = new Date(nowTs);
+  const nowIST = toISTDate(nowTs);
 
   const inWindow = (d) => {
-    const h = d.getHours();
+    const h = d.getUTCHours();
     return h >= startHour && h < endHour;
   };
 
-  const nextStartFrom = (d) => {
+  const nextStartIST = (d) => {
     const n = new Date(d);
-    if (n.getHours() >= endHour) n.setDate(n.getDate() + 1);
-    n.setHours(startHour, 0, 0, 0);
+    if (n.getUTCHours() >= endHour) {
+      n.setUTCDate(n.getUTCDate() + 1);
+    }
+    n.setUTCHours(startHour, 0, 0, 0);
+    if (n <= d) {
+      n.setUTCDate(n.getUTCDate() + 1);
+      n.setUTCHours(startHour, 0, 0, 0);
+    }
     return n;
   };
 
-  if (!inWindow(now)) {
-    const nextStart = nextStartFrom(now);
-    return Math.max(0, nextStart.getTime() - nowTs);
+  if (!inWindow(nowIST)) {
+    const nextStart = nextStartIST(nowIST);
+    return Math.max(0, fromISTDate(nextStart) - nowTs);
   }
-  const tentative = new Date(nowTs + baseDelayMs);
-  if (inWindow(tentative)) return baseDelayMs;
-  const nextStart = nextStartFrom(tentative);
-  return Math.max(0, nextStart.getTime() - nowTs);
+
+  const tentativeTs = nowTs + baseDelayMs;
+  const tentativeIST = toISTDate(tentativeTs);
+  if (inWindow(tentativeIST)) return baseDelayMs;
+
+  const nextStart = nextStartIST(tentativeIST);
+  return Math.max(0, fromISTDate(nextStart) - nowTs);
 }
 
 console.log("[WORKER] Initial Job Activated");
 
+// Clear any existing jobs first
+await taskQueue.obliterate({ force: true });
+
 const initialDelay = delayGenerator({ baseDelayMs: 0 });
+const initialScheduledTs = Date.now() + initialDelay;
 if (initialDelay > 0) {
   console.log(
     "[WORKER] Outside active window — scheduling initial job after",
     Math.round(initialDelay / 1000),
-    "seconds"
+    "seconds (IST)",
+    "for",
+    formatIST(initialScheduledTs)
   );
   await taskQueue.add(
     "tasks",
-    { exec: "example" },
-    { delay: initialDelay, removeOnComplete: true }
+    { exec: "example", scheduledForTs: initialScheduledTs },
+    {
+      delay: initialDelay,
+      removeOnComplete: true,
+      jobId: "recurring-task", // Use fixed job ID to prevent duplicates
+    }
   );
 } else {
   console.log(
-    "[WORKER] Inside active window — scheduling initial job immediately"
+    "[WORKER] Inside active window — scheduling initial job immediately for",
+    formatIST(initialScheduledTs)
   );
-  await taskQueue.add("tasks", { exec: "example" }, { removeOnComplete: true });
+  await taskQueue.add(
+    "tasks",
+    { exec: "example", scheduledForTs: initialScheduledTs },
+    {
+      removeOnComplete: true,
+      jobId: "recurring-task", // Use fixed job ID to prevent duplicates
+    }
+  );
 }
 
 const worker = new Worker(
   "tasks",
   async (job) => {
     console.log("[WORKER] Job Started Executing: ", job.data.exec);
+
     const child = spawn("node", [`../${job.data.exec}.js`], {
       stdio: "inherit",
     });
@@ -77,17 +126,28 @@ const worker = new Worker(
     });
     console.log("[WORKER] Job Executed");
     const nextDelay = delayGenerator({ baseDelayMs: delay });
+    const nextScheduledTs = Date.now() + nextDelay;
+    console.log(
+      "[WORKER] Next job scheduled in",
+      Math.round(nextDelay / 1000),
+      "s (IST) at",
+      formatIST(nextScheduledTs)
+    );
+    // Schedule next job BEFORE adding, to ensure proper delay
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Small buffer
     await taskQueue.add(
       "tasks",
-      { exec: "example", prev: job.id },
-      { delay: nextDelay, removeOnComplete: true }
+      { exec: "example", prev: job.id, scheduledForTs: nextScheduledTs },
+      {
+        delay: nextDelay,
+        removeOnComplete: true,
+        jobId: "recurring-task", // Use same fixed job ID
+      }
     );
-    const runAt = new Date(Date.now() + initialDelay);
     console.log(
-      "[WORKER] Initial job scheduled in",
-      Math.round(initialDelay / 1000),
-      "s at",
-      runAt.toLocaleTimeString()
+      "[WORKER] Next job added to queue with delay of",
+      Math.round(nextDelay / 1000),
+      "seconds"
     );
     return { done: true };
   },
