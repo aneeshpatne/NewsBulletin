@@ -12,7 +12,7 @@ const openai = createOpenAI({
 export async function generateReport(dataDump) {
   console.log("[LLM] Started Processing");
   const { text } = await generateText({
-    model: openai("gpt-5-mini"),
+    model: openai("gpt-5"),
     prompt: `The provided data dump is a raw, unstructured collection of news snippets and headlines scraped from various Indian news sources. It may contain duplicates, irrelevant content, or fragmented text. Your task is to analyze and extract the most relevant, recent, and significant news stories related to India from this data dump.
 
 Primary extraction goal:

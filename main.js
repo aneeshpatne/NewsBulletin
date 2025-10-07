@@ -35,3 +35,4 @@ console.log(mumbaiValue);
 
 console.log("[COMPLETE] All operations finished. Destroying Redis client.");
 client.destroy();
+process.exit(0);

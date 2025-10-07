@@ -20,7 +20,7 @@ export const news_item_tool = tool({
     console.log("[LOG] Description:", description);
     try {
       const newLen = await client.rPush(
-        "news_items",
+        "news_item_new",
         JSON.stringify({ title, description })
       );
       console.info("[INFO] Pushed news item to Redis, new length:", newLen);
