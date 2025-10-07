@@ -15,6 +15,6 @@ const mumbaiNewsRaw = await processNews("Mumbai News");
 
 console.log("[PROCESS] Merge India News and Mumbai News");
 
-await HeartBeat(indiaNewsRaw + mumbaiNewsRaw, oldData);
+await HeartBeat(indiaNewsRaw + mumbaiNewsRaw, oldDataString);
 
 process.exit(0);
