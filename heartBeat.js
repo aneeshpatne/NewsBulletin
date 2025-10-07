@@ -1,23 +1,20 @@
-import { createClient } from "redis";
-import { processNews } from "./processNews";
-
+import { client } from "./lib/redis_old.js";
+import { HeartBeat } from "./heartBeatAgent.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const client = await createClient()
-  .on("error", (err) => console.error("Redis Connection Error", err))
-  .connect();
+const oldData = await client.lRange("news_item_new", 0, -1);
+const oldDataString = oldData.join("\n");
 
-const india_news = await client.get("india_news");
-const mumbai_news = await client.get("mumbai_news");
-
-console.log("[HEARTBEAT] Fetching India News (heartbeat)...");
+console.log("[PROCESS] Fetching India News...");
 const indiaNewsRaw = await processNews("India News");
-console.log("[HEARTBEAT] India News fetched. Length:", indiaNewsRaw.length);
 
-console.log("[HEARTBEAT] Fetching Mumbai News (heartbeat)...");
+console.log("[PROCESS] Fetching Mumbai News...");
 const mumbaiNewsRaw = await processNews("Mumbai News");
-console.log("[HEARTBEAT] Mumbai News fetched. Length:", mumbaiNewsRaw.length);
 
-client.destroy();
+console.log("[PROCESS] Merge India News and Mumbai News");
+
+await HeartBeat(indiaNewsRaw + mumbaiNewsRaw, oldData);
+
+process.exit(0);
