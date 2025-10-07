@@ -20,3 +20,5 @@ const parsed = items.map((it) => {
 });
 
 console.log(parsed);
+
+process.exit(0);
