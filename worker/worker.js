@@ -141,7 +141,8 @@ const worker = new Worker(
       }
     }
 
-    const child = spawn("node", [`../${job.data.exec}.js`], {
+    const child = spawn("node", [`${job.data.exec}.js`], {
+      cwd: "..",
       stdio: "inherit",
     });
     await new Promise((resolve, reject) => {

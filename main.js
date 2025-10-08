@@ -1,6 +1,9 @@
 import { processNews } from "./processNews.js";
 import { generateReport } from "./newsAgent.js";
 import { createClient } from "redis";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 console.log("[CONNECT] Redis Client");
 const client = await createClient()
