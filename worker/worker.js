@@ -3,6 +3,12 @@ import { connection } from "../lib/redis.js";
 import { client } from "../lib/redis_old.js";
 import { taskQueue } from "../queues/taskqueue.js";
 import { spawn } from "child_process";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, "..");
 
 let delay = 3 * 60 * 60 * 1000;
 
@@ -142,7 +148,7 @@ const worker = new Worker(
     }
 
     const child = spawn("node", [`${job.data.exec}.js`], {
-      cwd: "..",
+      cwd: projectRoot,
       stdio: "inherit",
     });
     await new Promise((resolve, reject) => {
