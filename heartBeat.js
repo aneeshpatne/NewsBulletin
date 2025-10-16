@@ -1,5 +1,6 @@
 import { client } from "./lib/redis_old.js";
 import { HeartBeat } from "./heartBeatAgent.js";
+import { processNews } from "./processNews.js";
 import dotenv from "dotenv";
 
 dotenv.config();

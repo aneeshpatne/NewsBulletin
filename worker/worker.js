@@ -162,13 +162,13 @@ const worker = new Worker(
     const nextDelay = delayGenerator({ baseDelayMs: delay });
     const nextScheduledTs = Date.now() + nextDelay;
 
-    // Determine next job: "main" if it will run between 7:00-7:15 IST, otherwise "heartbeat"
+    // Determine next job: "main" if it will run between 7:00-7:15 IST, otherwise "heartBeat"
     const nextIST = toISTDate(nextScheduledTs);
     const nextHour = nextIST.getUTCHours();
     const nextMinute = nextIST.getUTCMinutes();
     const isMorningRitual =
       nextHour === 7 && nextMinute >= 0 && nextMinute < 15;
-    const nextExec = isMorningRitual ? "main" : "heartbeat";
+    const nextExec = isMorningRitual ? "main" : "heartBeat";
 
     console.log(
       "[WORKER] Next job scheduled in",
